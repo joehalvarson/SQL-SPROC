@@ -1,0 +1,104 @@
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROCEDURE [dbo].[CREATE_SEARCH_AND_RESP_FIELDS]
+	-- Add the parameters for the stored procedure here
+	@SearchField_dt VARCHAR(20),
+	@RespField_dt VARCHAR(20),
+	@FieldCount INT,
+	@SearchField_sql VARCHAR(20),
+	@RespField_sql VARCHAR(20),
+	@SearchAllField VARCHAR(20),
+	@RespAllField VARCHAR(20)
+AS
+--Check for duplicate field values
+IF (@SearchField_dt = @RespField_dt
+	OR @SearchField_dt = @SearchField_sql
+	OR @SearchField_dt = @RespField_sql
+	OR @RespField_dt = @SearchField_sql
+	OR @RespField_dt = @RespField_sql
+	OR @SearchField_sql = @RespField_sql)
+	BEGIN
+	PRINT N'Check your fields for duplicates. No Fields created.';
+	--If duplicate fields are entered as parameters, do not execute script.
+	SET noexec ON
+	END
+ELSE
+	--If there are no duplicate fields, then allow script to execute.
+	SET noexec OFF
+	--Check that a dt Search Field has been entered, if not, go to ELSE
+	IF (@SearchField_dt <> '')
+	BEGIN
+		DECLARE @Database VARCHAR(100)
+		--Get current Database name
+		SET @Database = (SELECT DB_NAME())
+		DECLARE @Counter_dt INT
+		SET @Counter_dt = 0
+		--While the number of the incremented @Counter_dt is less than the User-entered parameter for number of fields to create, keep running the WHILE
+		WHILE (@Counter_dt < @FieldCount)
+		BEGIN
+			SET @Counter_dt = @Counter_dt + 1
+			DECLARE @Search_Field_Create_dt VARCHAR(255)
+			--Create the script. It looks like 'ALTER TABLE + MU0000.dbo.tblDoc ADD SEARCH_12345_DT_01 TINYINT, RESP_12345_DT_01 TINYINT
+			SET @Search_Field_Create_dt = 'ALTER TABLE ' + @Database + '.dbo.tblDoc ADD ' + SUBSTRING(@SearchField_dt,0,17) +'0' + CAST(@Counter_dt AS VARCHAR(1)) + ' TINYINT' + ', '
+			+ SUBSTRING(@RespField_dt,0,15) +'0' + CAST(@Counter_dt AS VARCHAR(1)) + ' TINYINT'
+			PRINT (@Search_Field_Create_dt)
+			EXEC (@Search_Field_Create_dt)
+				--If User-entered field count to create is equal to or higher than 10, then move to this script so the field doesn't end up as _010, etc.
+				WHILE (@Counter_dt >= 10 AND @Counter_dt <= @FieldCount)
+				BEGIN
+					--Create the script that looks like 'ALTER TABLE + MU0000.dbo.tblDoc ADD SEARCH_12345_DT_10 TINYINT, RESP_12345_DT_10 TINYINT
+					SET @Search_Field_Create_dt = 'ALTER TABLE ' + @Database + '.dbo.tblDoc ADD ' + SUBSTRING(@SearchField_dt,0,17) + CAST(@Counter_dt AS VARCHAR(2)) + ' TINYINT' + ', '
+					+ SUBSTRING(@RespField_dt,0,15) + CAST(@Counter_dt AS VARCHAR(2)) + ' TINYINT'
+					PRINT (@Search_Field_Create_dt)
+					EXEC (@Search_Field_Create_dt)
+					SET @Counter_dt = @Counter_dt + 1
+				END
+		END
+	END
+	ELSE
+		--If no DT Search Field is entered, then the script is skipped for creating dt Fields
+		PRINT N'No DT Search or Resp fields created. There was no DT Search Field Entered.';
+	--Check that a SQL Search Field has been entered, if not, go to ELSE
+	IF (@SearchField_sql <> '')
+	BEGIN
+		DECLARE @Counter_sql INT
+		SET @Counter_sql = 0
+		WHILE (@Counter_sql < @FieldCount)
+		BEGIN
+			SET @Counter_sql = @Counter_sql + 1
+			DECLARE @Search_Field_Create_sql VARCHAR(255)
+			--Create the script. It looks like 'ALTER TABLE + MU0000.dbo.tblDoc ADD SEARCH_12345_SQL_01 TINYINT, RESP_12345_SQL_01 TINYINT
+			SET @Search_Field_Create_sql = 'ALTER TABLE ' + @Database + '.dbo.tblDoc ADD ' + SUBSTRING(@SearchField_sql,0,18) +'0' + CAST(@Counter_sql AS VARCHAR(1)) + ' TINYINT' + ', '
+			+ SUBSTRING(@RespField_sql,0,16) +'0' + CAST(@Counter_sql AS VARCHAR(1)) + ' TINYINT'
+			PRINT (@Search_Field_Create_sql)
+			EXEC (@Search_Field_Create_sql)
+				--If User-entered field count to create is equal to or higher than 10, then move to this script so the field doesn't end up as _010, etc.
+				WHILE (@Counter_sql >= 10 AND @Counter_sql <= @FieldCount)
+				BEGIN
+					--Create the script. It looks like 'ALTER TABLE + MU0000.dbo.tblDoc ADD SEARCH_12345_SQL_10 TINYINT, RESP_12345_SQL_10 TINYINT
+					SET @Search_Field_Create_sql = 'ALTER TABLE ' + @Database + '.dbo.tblDoc ADD ' + SUBSTRING(@SearchField_sql,0,18) + CAST(@Counter_sql AS VARCHAR(2)) + ' TINYINT' + ', '
+					+ SUBSTRING(@RespField_sql,0,16) + CAST(@Counter_sql AS VARCHAR(2)) + ' TINYINT'
+					PRINT (@Search_Field_Create_sql)
+					EXEC (@Search_Field_Create_sql)
+					SET @Counter_sql = @Counter_sql + 1
+				END
+		END
+	END
+	ELSE
+		--If no SQL Search Field is entered, then the script is skipped for creating SQL Fields
+		PRINT N'No SQL Search or Resp fields created. There was no SQL Search Field Entered';
+	IF (@SearchAllField <> '')
+	BEGIN
+		DECLARE @Search_Field_Create_ALL VARCHAR(255)
+		--Create the script. It looks like 'ALTER TABLE + MU0000.dbo.tblDoc ADD SEARCH_12345_SQL_01 TINYINT, RESP_12345_SQL_01 TINYINT
+		SET @Search_Field_Create_ALL = 'ALTER TABLE ' + @Database + '.dbo.tblDoc ADD ' + @SearchAllField + ' TINYINT' + ', ' + @RespAllField + ' TINYINT'
+		PRINT (@Search_Field_Create_ALL)
+		EXEC (@Search_Field_Create_ALL)
+	END
+	ELSE
+		--If no Search Field ALL is entered, then the script is skipped for creating the ALL Fields
+		PRINT N'No Search or Resp ALL field created. There was no Search ALL Field Entered';
