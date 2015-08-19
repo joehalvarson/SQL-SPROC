@@ -1,0 +1,36 @@
+--Running the UPDATE_INDATE_MID_AND_CUSTODIANS Stored Procedure
+--Step One
+--Get the list of Custodian IDs
+select id,name from tblCustodians where Name like 'Brazil' 
+order by id
+/*
+id	name
+3	Brazil
+*/
+
+--Step Two
+--Update Indate with parameters as follows: (@IndateFieldName, @StartDate, @EndDate, @MID, @CustodianIDs)
+--Empty parameters are okay, but keep the '' for blank values. If there are multiple Indate ranges, simply change the parameters as needed.
+
+EXEC UPDATE_INDATE_MID_AND_CUSTODIANS 'INDATE_12345_01', '1/1/1801', '12/31/2015', 'M12345', '3, 8, 4'
+
+--Update Indate with parameters as follows: (@IndateFieldName, @StartDate, @EndDate, @MID, @CustodianIDs)
+--If there are multiple MIDs, the variable for the MIDs must be formatted with a ',' between the MIDs with no space as seen below. If there are multiple Indate ranges, simply change the parameters as needed.
+
+EXEC UPDATE_INDATE_MID_AND_CUSTODIANS 'INDATE_12345_01', '1/1/1801', '12/31/2015', 'M12345'',''M98765'',''M54321', '3, 8, 4'
+
+--QC 
+SELECT MIN(DateSent) "Min Date Sent", MAX(DateSent) "Max Date Sent", MIN(DateLastMod) "Min Date Last Mod", MAX(DateLastMod) "Max Date Last Mod"
+FROM tblDoc
+WHERE INDATE_12345_01 = 1
+and AttachLVL = 0
+/*
+Results:
+Min Date Sent	Max Date Sent	Min Date Last Mod	Max Date Last Mod
+1/5/2004 12:00:00 AM	1/6/2010 12:00:00 AM
+*/
+
+--Running the CREATE_SEARCH_AND_RESP_FIELDS Stored Procedure
+--Enter DT Search_Field Name, DT Resp_Field_Name, Count of Fields to Create, SQL Search Field Name, SQL Resp Field Name, ALL Search Field Name, and ALL Resp Field Name
+--You may leave any one of these out, but if any SEARCH is left out, then that portion, DT, SQL, or ALL, of the script will not run and a message will display.
+EXEC CREATE_SEARCH_AND_RESP_FIELDS 'SEARCH_68725_DT_01', 'RESP_68725_DT_01', '1', 'SEARCH_68725_SQL_01','RESP_68725_SQL_01','SEARCH_68725_ALL', 'RESP_68725_ALL'
