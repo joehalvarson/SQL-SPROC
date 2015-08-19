@@ -7,4 +7,4 @@ These T-SQL scripts are provided here for anyone's use under the MIT License. Pl
 
 http://www.dtsearch.com/
 
-goo.gl/Pa6pQA - LAW PreDiscovery
+<a href="http://lawpractice.lexisnexis.com/LAW-PreDiscovery-A?gclid=Cj0KEQjw0tCuBRDIjJ_Mlb6zzpQBEiQAyjCoBh8Zlw8WAoj20xIkA6RzRoq1Y0nCVdIxhvjjX6rFliAaAtmH8P8HAQ">LAW PreDiscovery<a/>
