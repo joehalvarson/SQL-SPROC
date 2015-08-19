@@ -1,0 +1,369 @@
+GO
+/****** Object:  StoredProcedure [dbo].[UPDATE_INDATE_MID_AND_CUSTODIANS]    Script Date: 08/14/2015 16:52:44 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROCEDURE [dbo].[UPDATE_INDATE_MID_AND_CUSTODIANS]
+	-- Add the parameters for the stored procedure here
+	@FieldName VARCHAR(15),
+	@StartDate VARCHAR(15),
+	@EndDate VARCHAR(15),
+	--MID is an in-house column assigned to received Media
+	@MID VARCHAR(100),
+	@CustodianIDs VARCHAR(100)
+AS
+	DECLARE @Database VARCHAR(100)
+	SET @Database = (SELECT DB_NAME())
+	--Check if Indate field for creation request is already present in the database.
+	IF NOT EXISTS (SELECT *
+					FROM INFORMATION_SCHEMA.Columns
+					WHERE TABLE_NAME = 'tblDoc'
+					AND COLUMN_NAME = @FieldName)
+		BEGIN
+			DECLARE @INDATE_Field_Create VARCHAR(255)
+			--If Indate field does not exist in database, then insert the requested parameter into the tblDoc
+			SET @INDATE_Field_Create = '
+			ALTER TABLE ' + @Database + '.dbo.tblDoc ADD ' + @FieldName +' TINYINT'
+			PRINT (@INDATE_Field_Create)
+			EXEC (@INDATE_FIELD_Create)
+		END
+	DECLARE @create_sql01 VARCHAR(max)
+	BEGIN
+		--Custodian, MID, StartDate and EndDate - If all parameters are entered, this script executes
+		IF (@CustodianIDs <> ''
+		AND @MID <> ''
+		AND @StartDate <> ''
+		AND @EndDate <> ''
+		)
+	BEGIN
+			SET @create_sql01 =
+			'PRINT (''Custodian, MID, StartDate and EndDate'')
+			--Sets Tag (TINYINT) field entered as parameter equal to 1
+			UPDATE tblDoc SET ' + @FieldName + ' = 1
+			FROM dbo.tbldoc
+			--Do not include Excluded docs, such as virus files, and duplicate files
+			WHERE ISNULL(Exclude,0) = 0
+			--Checks for Custodians entered in execution parameter
+			AND CustodianID in (' + @CustodianIDs +')
+			--Checks for MID (an in-house column to track media) entered in execution parameter
+			AND MID_Number in (''' + @MID +''')
+			AND (AttachPID in 
+			(SELECT AttachPID FROM tblDoc WHERE
+			((DateSent BETWEEN ''' + @StartDate + ''' AND ''' + @EndDate + '''
+			OR DateLastMod BETWEEN ''' + @StartDate + ''' AND ''' + @EndDate + ''')
+			AND ISNULL(Exclude,0) = 0 and AttachLvl = 0 and AttachPID <> 0)
+			OR 
+			(((DateSent BETWEEN ''' + @StartDate + ''' AND ''' + @EndDate + '''
+			OR DateLastMod BETWEEN ''' + @StartDate + ''' AND ''' + @EndDate + ''')
+			AND ISNULL(Exclude,0) = 0 AND AttachLvl = 0) AND AttachPID = 0)))'
+			END
+		--MID, StartDate, and EndDate, but no Custodian - If no Custodian parameter provided, this script executes
+		ELSE IF (@CustodianIDs = ''
+		AND @MID <> ''
+		AND @StartDate <> ''
+		AND @EndDate <> ''
+		)
+	BEGIN
+			SET @create_sql01 =
+			'PRINT (''MID, StartDate, and EndDate, but no Custodian'')
+			UPDATE tblDoc SET ' + @FieldName + ' = 1
+			FROM dbo.tbldoc
+			WHERE ISNULL(Exclude,0) = 0
+			AND MID_Number in (''' + @MID +''')
+			AND (AttachPID in 
+			(SELECT AttachPID FROM tblDoc WHERE
+			((DateSent BETWEEN ''' + @StartDate + ''' AND ''' + @EndDate + '''
+			OR DateLastMod BETWEEN ''' + @StartDate + ''' AND ''' + @EndDate + ''')
+			AND ISNULL(Exclude,0) = 0 and AttachLvl = 0 and AttachPID <> 0)
+			OR 
+			(((DateSent BETWEEN ''' + @StartDate + ''' AND ''' + @EndDate + '''
+			OR DateLastMod BETWEEN ''' + @StartDate + ''' AND ''' + @EndDate + ''')
+			AND ISNULL(Exclude,0) = 0 AND AttachLvl = 0) AND AttachPID = 0)))'
+			END
+		--Custodian, StartDate, EndDate, but no MID - If no MID parameter provided, this script executes
+		ELSE IF (@CustodianIDs <> ''
+		AND @MID = ''
+		AND @StartDate <> ''
+		AND @EndDate <> ''
+		)
+	BEGIN
+			SET @create_sql01 =
+			'PRINT (''Custodian, StartDate, EndDate, but no MID'')
+			UPDATE tblDoc SET ' + @FieldName + ' = 1
+			FROM dbo.tbldoc
+			WHERE ISNULL(Exclude,0) = 0
+			AND CustodianID in (' + @CustodianIDs +')
+			AND (AttachPID in 
+			(SELECT AttachPID FROM tblDoc WHERE
+			((DateSent BETWEEN ''' + @StartDate + ''' AND ''' + @EndDate + '''
+			OR DateLastMod BETWEEN ''' + @StartDate + ''' AND ''' + @EndDate + ''')
+			AND ISNULL(Exclude,0) = 0 and AttachLvl = 0 and AttachPID <> 0)
+			OR 
+			(((DateSent BETWEEN ''' + @StartDate + ''' AND ''' + @EndDate + '''
+			OR DateLastMod BETWEEN ''' + @StartDate + ''' AND ''' + @EndDate + ''')
+			AND ISNULL(Exclude,0) = 0 AND AttachLvl = 0) AND AttachPID = 0)))'
+			END
+		--StartDate, and EndDate, but no MID or Custodian - If no MID and no Custodian parameter entered, this script executes
+		ELSE IF (@CustodianIDs = ''
+		AND @MID = ''
+		AND @StartDate <> ''
+		AND @EndDate <> ''
+		)
+	BEGIN
+			SET @create_sql01 =
+			'PRINT (''StartDate, and EndDate, but no MID or Custodian'')
+			UPDATE tblDoc SET ' + @FieldName + ' = 1
+			FROM dbo.tbldoc
+			WHERE ISNULL(Exclude,0) = 0
+			AND (AttachPID in 
+			(SELECT AttachPID FROM tblDoc WHERE
+			((DateSent BETWEEN ''' + @StartDate + ''' AND ''' + @EndDate + '''
+			OR DateLastMod BETWEEN ''' + @StartDate + ''' AND ''' + @EndDate + ''')
+			AND ISNULL(Exclude,0) = 0 and AttachLvl = 0 and AttachPID <> 0)
+			OR 
+			(((DateSent BETWEEN ''' + @StartDate + ''' AND ''' + @EndDate + '''
+			OR DateLastMod BETWEEN ''' + @StartDate + ''' AND ''' + @EndDate + ''')
+			AND ISNULL(Exclude,0) = 0 AND AttachLvl = 0) AND AttachPID = 0)))'
+			END
+		--Custodian, MID, and EndDate, but no StartDate - If no StartDate parameter entered, this script executes
+		ELSE IF (@CustodianIDs <> ''
+		AND @MID <> ''
+		AND @StartDate = ''
+		AND @EndDate <> ''
+		)
+	BEGIN
+			SET @create_sql01 =
+			'PRINT (''Custodian, MID, and EndDate, but no StartDate'')
+			UPDATE tblDoc SET ' + @FieldName + ' = 1
+			FROM dbo.tbldoc
+			WHERE ISNULL(Exclude,0) = 0
+			AND CustodianID in (' + @CustodianIDs +')
+			AND MID_Number in (''' + @MID +''')
+			AND (AttachPID in 
+			(SELECT AttachPID FROM tblDoc WHERE
+			((DateSent <= ''' + @EndDate + '''
+			OR DateLastMod <= ''' + @EndDate + ''')
+			AND ISNULL(Exclude,0) = 0 and AttachLvl = 0 and AttachPID <> 0)
+			OR 
+			(((DateSent <= ''' + @EndDate + '''
+			OR DateLastMod <= ''' + @EndDate + ''')
+			AND ISNULL(Exclude,0) = 0 AND AttachLvl = 0) AND AttachPID = 0)))'
+			END
+		--Custodian and EndDate, but no MID or StartDate - If no MID and no StartDate parameter provided, this script executes
+		ELSE IF (@CustodianIDs <> ''
+		AND @MID = ''
+		AND @StartDate = ''
+		AND @EndDate <> ''
+		)
+	BEGIN
+			SET @create_sql01 =
+			'PRINT (''Custodian and EndDate, but no MID or StartDate'')
+			UPDATE tblDoc SET ' + @FieldName + ' = 1
+			FROM dbo.tbldoc
+			WHERE ISNULL(Exclude,0) = 0
+			AND CustodianID in (' + @CustodianIDs +')
+			AND (AttachPID in 
+			(SELECT AttachPID FROM tblDoc WHERE
+			((DateSent <= ''' + @EndDate + '''
+			OR DateLastMod <= ''' + @EndDate + ''')
+			AND ISNULL(Exclude,0) = 0 and AttachLvl = 0 and AttachPID <> 0)
+			OR 
+			(((DateSent <= ''' + @EndDate + '''
+			OR DateLastMod <= ''' + @EndDate + ''')
+			AND ISNULL(Exclude,0) = 0 AND AttachLvl = 0) AND AttachPID = 0)))'
+			END
+		--Custodian, and StartDate, but no MID or EndDate - If no MID and no EndDate parameter provided, this script executes
+		ELSE IF (@CustodianIDs <> ''
+		AND @MID = ''
+		AND @StartDate <> ''
+		AND @EndDate = ''
+		)
+	BEGIN
+			SET @create_sql01 =
+			'PRINT (''Custodian, and StartDate, but no MID or EndDate'')
+			UPDATE tblDoc SET ' + @FieldName + ' = 1
+			FROM dbo.tbldoc
+			WHERE ISNULL(Exclude,0) = 0
+			AND CustodianID in (' + @CustodianIDs +')
+			AND (AttachPID in 
+			(SELECT AttachPID FROM tblDoc WHERE
+			((DateSent >= ''' + @StartDate + '''
+			OR DateLastMod >= ''' + @StartDate + ''')
+			AND ISNULL(Exclude,0) = 0 and AttachLvl = 0 and AttachPID <> 0)
+			OR 
+			(((DateSent >= ''' + @StartDate + '''
+			OR DateLastMod >= ''' + @StartDate + ''')
+			AND ISNULL(Exclude,0) = 0 AND AttachLvl = 0) AND AttachPID = 0)))'
+		END
+		--Custodian, MID, and StartDate, but no EndDate - If no EndDate parameter is entered, this script executes
+		ELSE IF (@CustodianIDs <> ''
+		AND @MID <> ''
+		AND @StartDate <> ''
+		AND @EndDate = ''
+		)
+	BEGIN
+			SET @create_sql01 =
+			'PRINT (''Custodian, MID, and StartDate, but no EndDate'')
+			UPDATE tblDoc SET ' + @FieldName + ' = 1
+			FROM dbo.tbldoc
+			WHERE ISNULL(Exclude,0) = 0
+			AND CustodianID in (' + @CustodianIDs +')
+			AND MID_Number in (''' + @MID +''')
+			AND (AttachPID in 
+			(SELECT AttachPID FROM tblDoc WHERE
+			((DateSent >= ''' + @StartDate + '''
+			OR DateLastMod >= ''' + @StartDate + ''')
+			AND ISNULL(Exclude,0) = 0 and AttachLvl = 0 and AttachPID <> 0)
+			OR 
+			(((DateSent >= ''' + @StartDate + '''
+			OR DateLastMod >= ''' + @StartDate + ''')
+			AND ISNULL(Exclude,0) = 0 AND AttachLvl = 0) AND AttachPID = 0)))'
+			END
+		--Custodian and MID, but no StartDate or EndDate - If no StartDate and no EndDate parameter provided, this script executes
+		ELSE IF (@CustodianIDs <> ''
+		AND @MID <> ''
+		AND @StartDate = ''
+		AND @EndDate = ''
+		)
+	BEGIN
+			SET @create_sql01 =
+			'PRINT (''Custodian and MID, but no StartDate or EndDate'')
+			UPDATE tblDoc SET ' + @FieldName + ' = 1
+			FROM dbo.tbldoc
+			WHERE ISNULL(Exclude,0) = 0
+			AND CustodianID in (' + @CustodianIDs +')
+			AND MID_Number in (''' + @MID +''')'
+			END
+		--Custodian, but no MID, StartDate or EndDate - If no MID and no StartDate and no EndDate parameter provided, this script executes
+		ELSE IF (@CustodianIDs <> ''
+		AND @MID = ''
+		AND @StartDate = ''
+		AND @EndDate = ''
+		)
+	BEGIN
+			SET @create_sql01 =
+			'PRINT (''Custodian, but no MID, StartDate or EndDate'')
+			UPDATE tblDoc SET ' + @FieldName + ' = 1
+			FROM dbo.tbldoc
+			WHERE ISNULL(Exclude,0) = 0
+			AND CustodianID in (' + @CustodianIDs +')'
+			END
+		--MID, StartDate, but no Custodian or EndDate - If no Custodian and no EndDate parameter provided, this script executes
+		ELSE IF (@CustodianIDs = ''
+		AND @MID <> ''
+		AND @StartDate <> ''
+		AND @EndDate = ''
+		)
+	BEGIN
+			SET @create_sql01 =
+			'PRINT (''MID, StartDate, but no Custodian or EndDate'')
+			UPDATE tblDoc SET ' + @FieldName + ' = 1
+			FROM dbo.tbldoc
+			WHERE ISNULL(Exclude,0) = 0
+			AND MID_Number in (''' + @MID +''')
+			AND (AttachPID in 
+			(SELECT AttachPID FROM tblDoc WHERE
+			((DateSent >= ''' + @StartDate + '''
+			OR DateLastMod >= ''' + @StartDate + ''')
+			AND ISNULL(Exclude,0) = 0 and AttachLvl = 0 and AttachPID <> 0)
+			OR 
+			(((DateSent >= ''' + @StartDate + '''
+			OR DateLastMod >= ''' + @StartDate + ''')
+			AND ISNULL(Exclude,0) = 0 AND AttachLvl = 0) AND AttachPID = 0)))'
+			END
+		--MID, EndDate, but no Custodian or StartDate - If no Custodian and no StartDate parameter provided, this script executes
+		ELSE IF (@CustodianIDs = ''
+		AND @MID <> ''
+		AND @StartDate = ''
+		AND @EndDate <> ''
+		)
+	BEGIN
+			SET @create_sql01 =
+			'PRINT (''MID, EndDate, but no Custodian or StartDate'')
+			UPDATE tblDoc SET ' + @FieldName + ' = 1
+			FROM dbo.tbldoc
+			WHERE ISNULL(Exclude,0) = 0
+			AND MID_Number in (''' + @MID +''')
+			AND (AttachPID in 
+			(SELECT AttachPID FROM tblDoc WHERE
+			((DateSent <= ''' + @EndDate + '''
+			OR DateLastMod <= ''' + @EndDate + ''')
+			AND ISNULL(Exclude,0) = 0 and AttachLvl = 0 and AttachPID <> 0)
+			OR 
+			(((DateSent <= ''' + @EndDate + '''
+			OR DateLastMod <= ''' + @EndDate + ''')
+			AND ISNULL(Exclude,0) = 0 AND AttachLvl = 0) AND AttachPID = 0)))'
+			END
+		--MID, but no StartDate, Custodian, or EndDate - If no StartDate, Custodian, and no EndDate parameter provided, this script executes
+		ELSE IF (@CustodianIDs = ''
+		AND @MID <> ''
+		AND @StartDate = ''
+		AND @EndDate = ''
+		)
+	BEGIN
+			SET @create_sql01 =
+			'PRINT (''MID, but no StartDate, Custodian, or EndDate'')
+			UPDATE tblDoc SET ' + @FieldName + ' = 1
+			FROM dbo.tbldoc
+			WHERE ISNULL(Exclude,0) = 0
+			AND MID_Number in (''' + @MID +''')'
+			END
+		--StartDate, but no MID, Custodian or EndDate - If no MID, Custodian, and no EndDate parameter provided, this script executes
+		ELSE IF (@CustodianIDs = ''
+		AND @MID = ''
+		AND @StartDate <> ''
+		AND @EndDate = ''
+		)
+	BEGIN
+		SET @create_sql01 =
+			'PRINT (''StartDate, but no MID, Custodian or EndDate'')
+			UPDATE tblDoc SET ' + @FieldName + ' = 1
+			FROM dbo.tbldoc
+			WHERE ISNULL(Exclude,0) = 0
+			AND (AttachPID in 
+			(SELECT AttachPID FROM tblDoc WHERE
+			((DateSent >= ''' + @StartDate + '''
+			OR DateLastMod >= ''' + @StartDate + ''')
+			AND ISNULL(Exclude,0) = 0 and AttachLvl = 0 and AttachPID <> 0)
+			OR 
+			(((DateSent >= ''' + @StartDate + '''
+			OR DateLastMod >= ''' + @StartDate + ''')
+			AND ISNULL(Exclude,0) = 0 AND AttachLvl = 0) AND AttachPID = 0)))'
+			END
+		--EndDate, but no MID, Custodian or StartDate - If no MID, Custodian, and no StartDate parameter provided, this script executes
+		ELSE IF (@CustodianIDs = ''
+		AND @MID = ''
+		AND @StartDate = ''
+		AND @EndDate <> ''
+		)
+	BEGIN
+			SET @create_sql01 =
+			'PRINT (''EndDate, but no MID, Custodian or StartDate'')
+			UPDATE tblDoc SET ' + @FieldName + ' = 1
+			FROM dbo.tbldoc
+			WHERE ISNULL(Exclude,0) = 0
+			AND (AttachPID in 
+			(SELECT AttachPID FROM tblDoc WHERE
+			((DateSent <= ''' + @EndDate + '''
+			OR DateLastMod <= ''' + @EndDate + ''')
+			AND ISNULL(Exclude,0) = 0 and AttachLvl = 0 and AttachPID <> 0)
+			OR 
+			(((DateSent <= ''' + @EndDate + '''
+			OR DateLastMod <= ''' + @EndDate + ''')
+			AND ISNULL(Exclude,0) = 0 AND AttachLvl = 0) AND AttachPID = 0)))'
+			END
+				--No parameters are entered
+		ELSE
+	BEGIN
+			SET @create_sql01 =
+			'Print (''You have entered no parameters and therefore do not need an INDATE search restriction.'')'
+			END
+		END
+
+BEGIN
+EXEC (@create_sql01)
+PRINT(@create_sql01)
+PRINT (+ @FieldName + ' updated')
+END
