@@ -6,4 +6,5 @@ The following stored procedures were developed specificially to interface with M
 These T-SQL scripts are provided here for anyone's use under the MIT License. Please provide appropriate attribution if these scripts are used.
 
 http://www.dtsearch.com/
+
 goo.gl/Pa6pQA - LAW PreDiscovery
